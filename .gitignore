@@ -1,0 +1,5 @@
+.DS_Store
+nvim-pack-lock.json
+
+lua/plugins/dev/*
+!lua/plugins/dev/.gitkeep
