@@ -89,6 +89,8 @@
 
 这是一个刻意的选择：配置本身只负责编辑器行为，不顺手承担环境安装器的职责。
 
+如果你需要一个独立的 parser 安装器，可以看看我另外开源的 [`tsinstaller`](https://github.com/0antinomia/tsinstaller)。
+
 ## 主题与高亮
 
 我现在通过 [`hlcraft.nvim`](https://github.com/0antinomia/hlcraft.nvim) 统一管理高亮组，包括：
