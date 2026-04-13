@@ -27,10 +27,59 @@ local function run_setup(spec)
   end
 end
 
+local function replay_mapping(rhs)
+  local keys = api.nvim_replace_termcodes(rhs, true, false, true)
+  vim.schedule(function()
+    api.nvim_feedkeys(keys, 'm', false)
+  end)
+end
+
+local function unpack_keymap(map)
+  local mode = map[1] or 'n'
+  local lhs = map[2]
+  local rhs = map[3]
+  local opts = vim.tbl_extend('force', { silent = true }, map[4] or {})
+  return mode, lhs, rhs, opts
+end
+
+local function ensure_runtimepath(path)
+  if vim.tbl_contains(api.nvim_list_runtime_paths(), path) then
+    return
+  end
+
+  vim.opt.rtp:prepend(path)
+end
+
+local function source_runtime_dir(path, subdir)
+  local files = fn.glob(path .. '/' .. subdir .. '/**/*', false, true)
+  table.sort(files)
+
+  for _, file in ipairs(files) do
+    if fn.isdirectory(file) ~= 1 and (file:sub(-4) == '.vim' or file:sub(-4) == '.lua') then
+      vim.cmd.source(fn.fnameescape(file))
+    end
+  end
+end
+
+local function load_plugin_runtime(spec)
+  if spec.kind == 'dev' then
+    -- dev 插件直接挂入 runtimepath，并手动执行 plugin 与 after/plugin 脚本。
+    ensure_runtimepath(spec.src)
+    source_runtime_dir(spec.src, 'plugin')
+    source_runtime_dir(spec.src, 'after/plugin')
+    return
+  end
+
+  vim.cmd.packadd(spec.name)
+end
+
 function M.load(name)
   local resolved = specs.resolve_name(name)
   if not resolved then
     error(('未找到插件 %s'):format(name))
+  end
+  if state.disabled[resolved] then
+    return
   end
 
   if state.loaded[resolved] then
@@ -45,24 +94,9 @@ function M.load(name)
     end
   end
 
-  vim.cmd.packadd(spec.name)
+  load_plugin_runtime(spec)
   state.loaded[spec.name] = true
   run_setup(spec)
-end
-
-local function replay_mapping(rhs)
-  local keys = api.nvim_replace_termcodes(rhs, true, false, true)
-  vim.schedule(function()
-    api.nvim_feedkeys(keys, 'm', false)
-  end)
-end
-
-local function unpack_keymap(map)
-  local mode = map[1] or 'n'
-  local lhs = map[2]
-  local rhs = map[3]
-  local opts = vim.tbl_extend('force', { silent = true }, map[4] or {})
-  return mode, lhs, rhs, opts
 end
 
 function M.create_key_loader(spec)
@@ -151,7 +185,7 @@ function M.create_event_loader(spec)
 end
 
 function M.register_build_hook(spec)
-  if not spec.build then
+  if spec.kind ~= 'remote' or not spec.build then
     return
   end
 
@@ -189,14 +223,18 @@ function M.install_plugins()
 
   for _, name in ipairs(state.order) do
     local spec = state.specs[name]
-    table.insert(pack_specs, {
-      name = spec.name,
-      src = spec.src,
-      version = spec.version,
-    })
+    if spec.kind == 'remote' then
+      table.insert(pack_specs, {
+        name = spec.name,
+        src = spec.src,
+        version = spec.version,
+      })
+    end
   end
 
-  vim.pack.add(pack_specs, { confirm = false, load = false })
+  if #pack_specs > 0 then
+    vim.pack.add(pack_specs, { confirm = false, load = false })
+  end
 end
 
 return M

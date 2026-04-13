@@ -1,21 +1,25 @@
+local api = vim.api
+
 local M = {}
 
-local api = vim.api
+local function collect_sorted_names(...)
+  local names = {}
+
+  for i = 1, select('#', ...) do
+    for _, item in ipairs(select(i, ...) or {}) do
+      names[type(item) == 'table' and item.name or item] = true
+    end
+  end
+
+  local summary = vim.tbl_keys(names)
+  table.sort(summary)
+  return summary
+end
 
 function M.create_pack_commands(manager)
   api.nvim_create_user_command('PackClean', function()
     local result = manager.clean()
-    local names = {}
-
-    for _, name in ipairs(result.lock or {}) do
-      names[name] = true
-    end
-    for _, name in ipairs(result.removed or {}) do
-      names[name] = true
-    end
-
-    local summary = vim.tbl_keys(names)
-    table.sort(summary)
+    local summary = collect_sorted_names(result.lock, result.removed)
 
     if #summary == 0 then
       vim.notify('PackClean: 没有需要清理的陈旧插件', vim.log.levels.INFO)
@@ -26,17 +30,7 @@ function M.create_pack_commands(manager)
 
   api.nvim_create_user_command('PackStatus', function()
     local status = manager.status()
-    local stale_names = {}
-
-    for _, name in ipairs(status.stale.lock or {}) do
-      stale_names[name] = true
-    end
-    for _, item in ipairs(status.stale.pack_dirs or {}) do
-      stale_names[item.name] = true
-    end
-
-    local stale = vim.tbl_keys(stale_names)
-    table.sort(stale)
+    local stale = collect_sorted_names(status.stale.lock, status.stale.pack_dirs)
 
     vim.notify(
       table.concat({

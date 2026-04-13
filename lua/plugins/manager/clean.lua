@@ -28,8 +28,15 @@ local function write_file(path, content)
 end
 
 local function active_plugin_names()
+  -- disabled 与 shadowed 仍属于受管理插件，避免 clean 误删锁文件或安装目录。
   local active = {}
   for name, _ in pairs(state.specs) do
+    active[name] = true
+  end
+  for name, _ in pairs(state.disabled or {}) do
+    active[name] = true
+  end
+  for name, _ in pairs(state.shadowed or {}) do
     active[name] = true
   end
   return active
@@ -131,10 +138,11 @@ function M.clean()
 end
 
 function M.status()
-  local declared = vim.tbl_keys(state.specs)
+  local declared_map = active_plugin_names()
   local installed_map = installed_plugin_names()
   local lock_plugins = read_lockfile_plugins()
   local stale = M.to_clean()
+  local declared = vim.tbl_keys(declared_map)
   local installed = vim.tbl_keys(installed_map)
   local locked = vim.tbl_keys(lock_plugins or {})
 
