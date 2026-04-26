@@ -1,9 +1,7 @@
 -- bufferline.nvim: 顶部缓冲区标签栏，用来管理多 buffer 切换与选择
 return {
   repo = 'akinsho/bufferline.nvim',
-  dependencies = {
-    'nvim-web-devicons',
-  },
+  dependencies = { 'nvim-web-devicons' },
   priority = 980,
   load = {
     eager = true,

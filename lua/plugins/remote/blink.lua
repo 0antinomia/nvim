@@ -2,10 +2,11 @@
 -- 这里固定使用本地构建的 Rust fuzzy 实现
 return {
   repo = 'saghen/blink.cmp',
+  version = '1.*',
   dependencies = { 'friendly-snippets' },
   build = 'cargo build --release',
   load = {
-    eager = true,
+    events = { 'InsertEnter', 'CmdlineEnter' },
   },
   setup = function()
     require('blink.cmp').setup({
